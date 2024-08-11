@@ -1,5 +1,5 @@
 ## Introduction
-This project focuses on the implementation of Pascal's Triangle in Python. Pascal's Triangle is a triangular array of the binomial coefficients. Each number is the sum of the two numbers directly above it in the previous row. This project will help you understand how to generate Pascal's Triangle and work with nested loops and lists in Python.
+This repository contains solutions and resources for various technical interview challenges and coding problems, specifically prepared for the ALX program. Each solution is implemented in Python, with a focus on clarity and efficiency.
 
 ### Resources
 * [What is Pascal’s triangle](https://intranet.alxswe.com/rltoken/F458nFkW9StJum2zPI4khg)
