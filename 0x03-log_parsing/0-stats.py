@@ -1,76 +1,84 @@
 
 #!/usr/bin/python3
+
+""" Python script that reads stdin line by line and computes metrics:
+  - Input format:
+    <IP Address> - [<date>] "GET /projects/260 HTTP/1.1"
+    <status code> <file size>
+  - After every 10 lines and/or a keyboard interruption (CTRL + C),
+  print these statistics from the beginning:
+    - Total file size: File size for all previous lines
+    - Status codes: Status codes from all previous lines in ascending order
 """
-Log Parsing Script
 
-This script reads lines from standard input and computes metrics based
-on a specific log format.
-
-The expected log format is: <IP Address> - [<date>]
-"GET /projects/260 HTTP/1.1" <status code> <file size>
-
-Lines that do not match this format are skipped.
-
-After every 10 lines or upon a keyboard interruption (CTRL + C),
-the script prints the following statistics:
-- Total file size: The sum of all <file size> values from the logs
-- Number of lines by status code: Counts of lines for specific status codes
-(200, 301, 400, 401, 403, 404, 405, and 500)
-
-Status codes that do not appear or are not integers are not printed.
-"""
 import sys
-import re
-from collections import defaultdict
 
 
-# Define the regular expression pattern for the log format
-log_pattern = re.compile(
-    r'(\d{1,3}\.){3}\d{1,3} - \['
-    r'(.*?)\] "GET \/projects\/260 HTTP\/1\.1" '
-    r'(\d{3}) (\d+)'
-)
+def print_statistics(total_file_size, status_codes):
+    """
+    Print metrics including total file size and status code counts.
+    """
+    print("File size: {}".format(total_file_size))
+    for code, count in sorted(status_codes.items()):
+        if count > 0:
+            print("{}: {}".format(code, count))
 
-# Initialize variables for storing metrics
+
+def parse_line(line):
+    """
+    Parse a line and extract file size and status code.
+    Return file size and status code if the line matches the expected format,
+    otherwise return None.
+    Refactored this function to basically ensure that the status code is
+    compared directly to the allowed list of strings without automatically
+    casting it to an integer, thereby handling cases where the status code
+    is not an integer or is not in the allowed list.
+    """
+    parts = line.split()  # split line into components
+    # check if parts matches the expected format
+    if len(parts) >= 7:
+        file_size_str = parts[-1]
+        code_str = parts[-2]
+        # check if the status code(code_str) is in the allowed list
+        # of strings (status_codes)
+        if code_str in status_codes:
+            try:
+                # convert file_size to integer or try to, lol
+                file_size = int(file_size_str)
+                return file_size, code_str
+            except ValueError:
+                # Handle case where file size is not an integer
+                return None, None
+    return None, None
+
+
+# initialize variables to store metrics
 total_file_size = 0
-status_counts = defaultdict(int)
-lines_processed = 0
-
-
-def print_statistics():
-    """
-    Prints the total file size and the number of lines by
-    status code in ascending order.
-    """
-    global total_file_size, status_counts
-    print(f"File size: {total_file_size}")
-    for status_code in sorted(status_counts):
-        print(f"{status_code}: {status_counts[status_code]}")
-
+status_codes = {"200": 0, "301": 0, "400": 0,
+                "401": 0, "403": 0, "404": 0, "405": 0, "500": 0}
+line_count = 0
 
 try:
+    # loop over each line in stdin
     for line in sys.stdin:
-        line = line.strip()
-        match = log_pattern.match(line)
-        if match:
-            status_code = int(match.group(3))
-            file_size = int(match.group(4))
+        # increment line count to track when to print statistics
+        line_count += 1
+        file_size, code = parse_line(line)
 
-            # Update metrics
+        if file_size is not None and code in status_codes:
             total_file_size += file_size
-            status_counts[status_code] += 1
+            status_codes[code] += 1
 
-            lines_processed += 1
-
-            # Print statistics every 10 lines
-            if lines_processed % 10 == 0:
-                print_statistics()
+        if line_count % 10 == 0:
+            print_statistics(total_file_size, status_codes)
+            line_count = 0
 
 except KeyboardInterrupt:
-    # Print statistics on keyboard interrupt
-    print_statistics()
+    # Handle keyboard interruption
+    print_statistics(total_file_size, status_codes)
     sys.exit(0)
 
-# Print statistics after the last line if it's not already printed
-if lines_processed % 10 != 0:
-    print_statistics()
+finally:
+    # Ensure statistics are printed at the end of input
+    print_statistics(total_file_size, status_codes)
+
